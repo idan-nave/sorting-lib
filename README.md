@@ -1,1 +1,1 @@
-# Sorting Library
+# sorting-lib
