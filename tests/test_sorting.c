@@ -2,8 +2,39 @@
 #include <stdlib.h>
 #include <string.h>
 #include <setjmp.h>
+#include <dlfcn.h>
 #include <cmocka.h>
-#include "../include/sorting.h"
+
+typedef void (*sort_func)(int[], int, const char *);
+
+void *handle;
+sort_func sort_array;
+
+// Load Sorting Library
+static int setup(void **state)
+{ // ✅ FIX: Changed return type to int
+    handle = dlopen("bin/libsorting.so", RTLD_LAZY);
+    if (!handle)
+    {
+        printf("❌ Failed to load sorting library: %s\n", dlerror());
+        return -1;
+    }
+
+    sort_array = (sort_func)dlsym(handle, "sort_array");
+    if (!sort_array)
+    {
+        printf("❌ Failed to load sort_array function\n");
+        return -1;
+    }
+    return 0; // ✅ FIX: Must return an int
+}
+
+// Close Library After Tests
+static int teardown(void **state)
+{ // ✅ FIX: Changed return type to int
+    dlclose(handle);
+    return 0; // ✅ FIX: Must return an int
+}
 
 // Helper function to compare arrays
 static void assert_sorted(int *sorted, int *expected, int size)
@@ -58,10 +89,10 @@ static void test_unknown_algorithm(void **state)
 int main(void)
 {
     const struct CMUnitTest tests[] = {
-        cmocka_unit_test(test_quicksort),
-        cmocka_unit_test(test_mergesort),
-        cmocka_unit_test(test_heapsort),
-        cmocka_unit_test(test_unknown_algorithm),
+        cmocka_unit_test_setup_teardown(test_quicksort, setup, teardown),
+        cmocka_unit_test_setup_teardown(test_mergesort, setup, teardown),
+        cmocka_unit_test_setup_teardown(test_heapsort, setup, teardown),
+        cmocka_unit_test_setup_teardown(test_unknown_algorithm, setup, teardown),
     };
     return cmocka_run_group_tests(tests, NULL, NULL);
 }
